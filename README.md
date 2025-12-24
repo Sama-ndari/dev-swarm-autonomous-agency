@@ -33,8 +33,8 @@ DevSwarm operates on a recursive intelligence loop:
 
 ```bash
 # Clone the repository
-git clone https://github.com/Sama-ndari/dev-swarm.git
-cd dev-swarm
+git clone https://github.com/Sama-ndari/dev-swarm-autonomous-agency.git
+cd dev-swarm-autonomous-agency
 
 # Install dependencies using uv
 uv sync
