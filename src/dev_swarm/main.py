@@ -9,18 +9,20 @@ load_dotenv()
 
 def run():
     # 1. CLEAN WORKSPACE
-    if os.path.exists('project_output'):
-        shutil.rmtree('project_output')
-    os.makedirs('project_output/src', exist_ok=True)
+    workspace_dir = 'project_output'
+    src_dir = os.path.join(workspace_dir, 'src')
+    
+    if os.path.exists(workspace_dir):
+        shutil.rmtree(workspace_dir)
+    os.makedirs(src_dir, exist_ok=True)
 
-    # Load Model strings from .env
-    base_model = os.getenv("MODEL", "gpt-4o-mini")
+    # Load Model strings
     manager_model = os.getenv("MANAGER_MODEL", "gpt-4o")
 
-    print(f"## Phase 1: Discovery using {manager_model}...")
+    print(f"## Phase 1: Discovery & Architecture Research using {manager_model}...")
     
     inputs = {
-        'user_requirement': 'A high-speed real-time stock market tracker with SMS alerts.'
+        'user_requirement': 'A high-speed real-time stock market tracker with SMS alerts using Twilio and Redis.'
     }
 
     # 2. RUN THE ARCHITECT (Discovery Phase)
@@ -31,8 +33,8 @@ def run():
     print(f"\n## Blueprint Created: {blueprint.project_name}")
 
     # --- SAFETY LIMITER & BUDGET CONTROL ---
-    MAX_AGENTS = 2  # Only allow 2 extra specialists
-    MAX_TASKS = 4   # Only allow 4 specialized tasks
+    MAX_AGENTS = 2  
+    MAX_TASKS = 4   
     hiring_list = blueprint.required_agents[:MAX_AGENTS]
     task_list = blueprint.dynamic_tasks[:MAX_TASKS]
 
@@ -43,35 +45,40 @@ def run():
         active_agents[agent_schema.role] = new_agent
         print(f"   -> Hired Specialist: {agent_schema.role}")
 
-    # 4. DYNAMIC TASKING
-    final_tasks = []
+    # 4. ATOMIC EXECUTION LOOP (Phase 2)
+    # Instead of one big crew, we run individual mini-crews for each file
+    print(f"\n## Phase 2: Executing {len(task_list)} Atomic Build Tasks...")
+    
     for t_schema in task_list:
+        print(f"\n🛠️  Building Module: {t_schema.name}...")
+        
+        # Determine which agent is best for this task
         executing_agent = active_agents.get(t_schema.assigned_agent_role, active_agents["Architect"])
-        final_tasks.append(Task(
-            description=t_schema.description,
-            expected_output=t_schema.expected_output,
+        
+        atomic_task = Task(
+            description=(
+                f"GOAL: {t_schema.description}\n\n"
+                f"CRITICAL REQUIREMENT: You MUST use the 'Advanced FileWriter' tool to save your code. "
+                f"Do not simply output code in the chat. If you don't use the tool, you fail.\n"
+                f"Save as: {t_schema.name}"
+            ),
+            expected_output=f"A confirmation message from the Advanced FileWriter tool that {t_schema.name} was saved.",
             agent=executing_agent
-        ))
-        print(f"   -> Created Task: {t_schema.name}")
+        )
 
-    # 5. FINAL EXECUTION: The Evolved Swarm
-    print(f"\n## Phase 2: Executing Swarm (Manager: {manager_model})...")
-    
-    
-    evolved_crew = Crew(
-        agents=list(active_agents.values()),
-        tasks=final_tasks,
-        process=Process.hierarchical, 
-        manager_llm=manager_model, # High-reasoning manager
-        verbose=True
-    )
+        # Create a mini-crew for this specific file to prevent distractions
+        mini_crew = Crew(
+            agents=[executing_agent],
+            tasks=[atomic_task],
+            verbose=True,
+            process=Process.sequential
+        )
+        
+        mini_crew.kickoff()
 
-    final_output = evolved_crew.kickoff()
-    
-    print("\n\n########################")
-    print("## MISSION ACCOMPLISHED ##")
-    print("########################\n")
-    print(f"Final Build Result: {final_output.raw}")
+    print("\n\n####################################")
+    print("## MISSION ACCOMPLISHED: ALL FILES CREATED ##")
+    print("####################################\n")
 
 if __name__ == "__main__":
     run()
